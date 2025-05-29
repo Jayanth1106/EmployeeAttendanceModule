@@ -1,0 +1,16 @@
+.vs/
+bin/
+obj/
+*.user
+*.suo
+*.log
+.vscode/
+node_modules/
+*.pdb
+*.cache
+*.tmp
+*.bak
+*.swp
+.idea/
+*.nupkg
+.nuget/
