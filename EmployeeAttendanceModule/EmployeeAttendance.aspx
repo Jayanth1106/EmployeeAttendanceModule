@@ -1,4 +1,5 @@
 ﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="EmployeeAttendance.aspx.cs" Inherits="EmployeeAttendanceModule.EmployeeAttendance" %>
+<%-- CRUD operations implemented --%>
 
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
