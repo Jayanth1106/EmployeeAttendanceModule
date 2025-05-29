@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
 using System.Web.UI.WebControls;
 
@@ -14,7 +13,6 @@ namespace EmployeeAttendanceModule
         {
             if (!IsPostBack)
             {
-                // Initialize the ViewState list if null
                 if (ViewState[ViewStateKey] == null)
                 {
                     ViewState[ViewStateKey] = new List<AttendanceRecord>();
@@ -50,7 +48,6 @@ namespace EmployeeAttendanceModule
                     return;
                 }
 
-                // Generate a new ID
                 int newId = AttendanceRecords.Count > 0 ? AttendanceRecords.Max(r => r.ID) + 1 : 1;
 
                 AttendanceRecord newRecord = new AttendanceRecord
@@ -127,13 +124,13 @@ namespace EmployeeAttendanceModule
             string empIdSearch = txtSearchEmployeeID.Text.Trim().ToLower();
             bool hasEmpIdFilter = !string.IsNullOrEmpty(empIdSearch);
 
-            DateTime searchDate;
-            bool hasDateFilter = DateTime.TryParse(txtSearchDate.Text, out searchDate);
+            bool hasDateFilter = DateTime.TryParse(txtSearchDate.Text, out DateTime searchDate);
 
             var filtered = AttendanceRecords.AsEnumerable();
 
             if (hasEmpIdFilter)
                 filtered = filtered.Where(r => r.EmployeeID.ToLower().Contains(empIdSearch));
+
             if (hasDateFilter)
                 filtered = filtered.Where(r => r.AttendanceDate.Date == searchDate.Date);
 
@@ -159,7 +156,6 @@ namespace EmployeeAttendanceModule
                 int index = Convert.ToInt32(e.CommandArgument);
                 var record = AttendanceRecords[index];
 
-                // Populate form with record values
                 txtEmployeeID.Text = record.EmployeeID;
                 txtEmployeeName.Text = record.EmployeeName;
                 txtDate.Text = record.AttendanceDate.ToString("yyyy-MM-dd");
@@ -168,7 +164,6 @@ namespace EmployeeAttendanceModule
                 txtRemarks.Text = record.Remarks;
                 hiddenAttendanceID.Value = record.ID.ToString();
 
-                // Toggle buttons & form title
                 btnSave.Visible = false;
                 btnUpdate.Visible = true;
                 lblFormTitle.Text = "Edit Attendance Record";
