@@ -1,186 +1,123 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Data;
+using System.Web.UI;
 using System.Web.UI.WebControls;
+using Microsoft.Reporting.WebForms;
 
 namespace EmployeeAttendanceModule
 {
     public partial class EmployeeAttendance : System.Web.UI.Page
     {
-        private const string ViewStateKey = "AttendanceRecords";
+        private const string SessionKey = "AttendanceRecords";
 
         protected void Page_Load(object sender, EventArgs e)
         {
             if (!IsPostBack)
             {
-                if (ViewState[ViewStateKey] == null)
-                {
-                    ViewState[ViewStateKey] = new List<AttendanceRecord>();
-                }
-                LoadGrid();
-                ClearForm();
+                Session[SessionKey] = new List<Attendance>();
             }
-        }
-
-        private List<AttendanceRecord> AttendanceRecords
-        {
-            get => ViewState[ViewStateKey] as List<AttendanceRecord>;
-            set => ViewState[ViewStateKey] = value;
         }
 
         protected void btnSave_Click(object sender, EventArgs e)
         {
-            if (Page.IsValid)
+            List<Attendance> records = Session[SessionKey] as List<Attendance>;
+            int index = string.IsNullOrEmpty(hfSelectedIndex.Value) ? -1 : int.Parse(hfSelectedIndex.Value);
+
+            Attendance record = new Attendance
             {
-                if (!DateTime.TryParse(txtDate.Text, out DateTime date))
-                {
-                    ShowMessage("Invalid date format.");
-                    return;
-                }
-                if (!TimeSpan.TryParse(txtTimeIn.Text, out TimeSpan timeIn))
-                {
-                    ShowMessage("Invalid Time In format.");
-                    return;
-                }
-                if (!TimeSpan.TryParse(txtTimeOut.Text, out TimeSpan timeOut))
-                {
-                    ShowMessage("Invalid Time Out format.");
-                    return;
-                }
+                Id = index == -1 ? records.Count + 1 : records[index].Id,
+                EmployeeID = txtEmployeeID.Text.Trim(),
+                EmployeeName = txtEmployeeName.Text.Trim(),
+                Date = DateTime.Parse(txtDate.Text),
+                TimeIn = txtTimeIn.Text,
+                TimeOut = txtTimeOut.Text,
+                Remarks = txtRemarks.Text.Trim()
+            };
 
-                int newId = AttendanceRecords.Count > 0 ? AttendanceRecords.Max(r => r.ID) + 1 : 1;
-
-                AttendanceRecord newRecord = new AttendanceRecord
-                {
-                    ID = newId,
-                    EmployeeID = txtEmployeeID.Text.Trim(),
-                    EmployeeName = txtEmployeeName.Text.Trim(),
-                    AttendanceDate = date,
-                    TimeIn = timeIn.ToString(@"hh\:mm"),
-                    TimeOut = timeOut.ToString(@"hh\:mm"),
-                    Remarks = txtRemarks.Text.Trim()
-                };
-
-                AttendanceRecords.Add(newRecord);
-
-                ShowMessage("Record saved successfully.", false);
-                ClearForm();
-                LoadGrid();
-            }
-        }
-
-        protected void btnUpdate_Click(object sender, EventArgs e)
-        {
-            if (Page.IsValid)
+            if (index == -1)
             {
-                if (!int.TryParse(hiddenAttendanceID.Value, out int editId))
-                {
-                    ShowMessage("Invalid record ID.");
-                    return;
-                }
-                if (!DateTime.TryParse(txtDate.Text, out DateTime date))
-                {
-                    ShowMessage("Invalid date format.");
-                    return;
-                }
-                if (!TimeSpan.TryParse(txtTimeIn.Text, out TimeSpan timeIn))
-                {
-                    ShowMessage("Invalid Time In format.");
-                    return;
-                }
-                if (!TimeSpan.TryParse(txtTimeOut.Text, out TimeSpan timeOut))
-                {
-                    ShowMessage("Invalid Time Out format.");
-                    return;
-                }
-
-                var record = AttendanceRecords.FirstOrDefault(r => r.ID == editId);
-                if (record == null)
-                {
-                    ShowMessage("Record not found.");
-                    return;
-                }
-
-                record.EmployeeID = txtEmployeeID.Text.Trim();
-                record.EmployeeName = txtEmployeeName.Text.Trim();
-                record.AttendanceDate = date;
-                record.TimeIn = timeIn.ToString(@"hh\:mm");
-                record.TimeOut = timeOut.ToString(@"hh\:mm");
-                record.Remarks = txtRemarks.Text.Trim();
-
-                ShowMessage("Record updated successfully.", false);
-                ClearForm();
-                LoadGrid();
+                records.Add(record);
             }
-        }
+            else
+            {
+                records[index] = record;
+            }
 
-        protected void btnCancel_Click(object sender, EventArgs e)
-        {
+            Session[SessionKey] = records;
+            hfSelectedIndex.Value = "";
             ClearForm();
+            BindGrid();
         }
 
-        protected void btnSearch_Click(object sender, EventArgs e)
+        protected void GridView1_RowCommand(object sender, GridViewCommandEventArgs e)
         {
-            string empIdSearch = txtSearchEmployeeID.Text.Trim().ToLower();
-            bool hasEmpIdFilter = !string.IsNullOrEmpty(empIdSearch);
+            int index = Convert.ToInt32(e.CommandArgument);
+            List<Attendance> records = Session[SessionKey] as List<Attendance>;
 
-            bool hasDateFilter = DateTime.TryParse(txtSearchDate.Text, out DateTime searchDate);
-
-            var filtered = AttendanceRecords.AsEnumerable();
-
-            if (hasEmpIdFilter)
-                filtered = filtered.Where(r => r.EmployeeID.ToLower().Contains(empIdSearch));
-
-            if (hasDateFilter)
-                filtered = filtered.Where(r => r.AttendanceDate.Date == searchDate.Date);
-
-            gvAttendance.DataSource = filtered.ToList();
-            gvAttendance.DataBind();
-        }
-
-        protected void btnShowAll_Click(object sender, EventArgs e)
-        {
-            LoadGrid();
-        }
-
-        private void LoadGrid()
-        {
-            gvAttendance.DataSource = AttendanceRecords;
-            gvAttendance.DataBind();
-        }
-
-        protected void gvAttendance_RowCommand(object sender, GridViewCommandEventArgs e)
-        {
-            if (e.CommandName == "EditRecord")
+            if (e.CommandName == "EditRow")
             {
-                int index = Convert.ToInt32(e.CommandArgument);
-                var record = AttendanceRecords[index];
-
+                Attendance record = records[index];
                 txtEmployeeID.Text = record.EmployeeID;
                 txtEmployeeName.Text = record.EmployeeName;
-                txtDate.Text = record.AttendanceDate.ToString("yyyy-MM-dd");
+                txtDate.Text = record.Date.ToString("yyyy-MM-dd");
                 txtTimeIn.Text = record.TimeIn;
                 txtTimeOut.Text = record.TimeOut;
                 txtRemarks.Text = record.Remarks;
-                hiddenAttendanceID.Value = record.ID.ToString();
-
-                btnSave.Visible = false;
-                btnUpdate.Visible = true;
-                lblFormTitle.Text = "Edit Attendance Record";
-                lblMessage.Visible = false;
+                hfSelectedIndex.Value = index.ToString();
             }
-            else if (e.CommandName == "DeleteRecord")
+            else if (e.CommandName == "DeleteRow")
             {
-                int idToDelete = Convert.ToInt32(e.CommandArgument);
-                var record = AttendanceRecords.FirstOrDefault(r => r.ID == idToDelete);
-                if (record != null)
-                {
-                    AttendanceRecords.Remove(record);
-                    LoadGrid();
-                    ShowMessage("Record deleted successfully.", false);
-                    ClearForm();
-                }
+                records.RemoveAt(index);
+                Session[SessionKey] = records;
+                BindGrid();
             }
+        }
+
+        protected void btnGenerateReport_Click(object sender, EventArgs e)
+        {
+            DateTime fromDate, toDate;
+            if (!DateTime.TryParse(txtFromDate.Text, out fromDate) || !DateTime.TryParse(txtToDate.Text, out toDate))
+            {
+                return;
+            }
+
+            List<Attendance> allRecords = Session[SessionKey] as List<Attendance>;
+            List<Attendance> filtered = allRecords.FindAll(r => r.Date >= fromDate && r.Date <= toDate);
+
+            if (filtered.Count > 0)
+            {
+                DataTable dt = new DataTable("Attendance");
+                dt.Columns.Add("Id", typeof(int));
+                dt.Columns.Add("EmployeeID", typeof(string));
+                dt.Columns.Add("EmployeeName", typeof(string));
+                dt.Columns.Add("Date", typeof(DateTime));
+                dt.Columns.Add("TimeIn", typeof(string));
+                dt.Columns.Add("TimeOut", typeof(string));
+                dt.Columns.Add("Remarks", typeof(string));
+
+                foreach (Attendance record in filtered)
+                {
+                    dt.Rows.Add(record.Id, record.EmployeeID, record.EmployeeName, record.Date, record.TimeIn, record.TimeOut, record.Remarks);
+                }
+
+                ReportViewer1.ProcessingMode = ProcessingMode.Local;
+                ReportViewer1.LocalReport.ReportPath = Server.MapPath("~/Report1.rdlc");
+                ReportViewer1.LocalReport.DataSources.Clear();
+                ReportViewer1.LocalReport.DataSources.Add(new ReportDataSource("DataSet1", dt));
+                ReportViewer1.LocalReport.Refresh();
+                ReportViewer1.Visible = true;
+            }
+            else
+            {
+                ReportViewer1.Visible = false;
+            }
+        }
+
+        private void BindGrid()
+        {
+            GridView1.DataSource = Session[SessionKey] as List<Attendance>;
+            GridView1.DataBind();
         }
 
         private void ClearForm()
@@ -191,43 +128,17 @@ namespace EmployeeAttendanceModule
             txtTimeIn.Text = "";
             txtTimeOut.Text = "";
             txtRemarks.Text = "";
-            hiddenAttendanceID.Value = "";
-            btnSave.Visible = true;
-            btnUpdate.Visible = false;
-            lblFormTitle.Text = "Add New Attendance Record";
-            lblMessage.Visible = false;
         }
 
-        private void ShowMessage(string message, bool isError = true)
+        public class Attendance
         {
-            lblMessage.Text = message;
-            lblMessage.ForeColor = isError ? System.Drawing.Color.Red : System.Drawing.Color.Green;
-            lblMessage.Visible = true;
+            public int Id { get; set; }
+            public string EmployeeID { get; set; }
+            public string EmployeeName { get; set; }
+            public DateTime Date { get; set; }
+            public string TimeIn { get; set; }
+            public string TimeOut { get; set; }
+            public string Remarks { get; set; }
         }
-
-        protected void cvTimeOut_ServerValidate(object source, System.Web.UI.WebControls.ServerValidateEventArgs args)
-        {
-            if (TimeSpan.TryParse(txtTimeIn.Text, out TimeSpan timeIn) &&
-                TimeSpan.TryParse(txtTimeOut.Text, out TimeSpan timeOut))
-            {
-                args.IsValid = timeOut > timeIn;
-            }
-            else
-            {
-                args.IsValid = false;
-            }
-        }
-    }
-
-    [Serializable]
-    public class AttendanceRecord
-    {
-        public int ID { get; set; }
-        public string EmployeeID { get; set; }
-        public string EmployeeName { get; set; }
-        public DateTime AttendanceDate { get; set; }
-        public string TimeIn { get; set; }
-        public string TimeOut { get; set; }
-        public string Remarks { get; set; }
     }
 }
